@@ -1,5 +1,6 @@
 const Nebulas = require('nebulas');
 const Token = require('../../models/token');
+const Task = require('../../models/task');
 const Account = require('../../models/account');
 const NebulasNeb = Nebulas.Neb;
 const IO = require('../../helpers/io');
@@ -7,7 +8,7 @@ const IO = require('../../helpers/io');
 const ClientError = require('../../error/client_error.js');
 
 const path = require('path');
-var escrow, payment, token;
+var escrow, payment, token, task;
 var neb = new NebulasNeb();
 var PropertiesReader = require('properties-reader');
 var properties = PropertiesReader(path.resolve(__dirname, '../../config/chain.properties'));
@@ -32,22 +33,8 @@ function init(networkId) {
     }
     neb.setRequest(new Nebulas.HttpRequest(properties.get(network + '.url')));
     token = new Token(neb, properties.get(network + '.contract.token.address'));
-    // escrow = new Escrow(neb, token, properties.get(network + '.contract.escrow.address'));
-    // payment = new Payment(neb, token, properties.get(network + '.contract.payment.address'));
+    task = new Task(neb,  properties.get(network + '.contract.token.address'));
     AppLogger.logInfo("Network successfully initialized to: "+network, true);
-}
-
-function modify(networkId) {
-    var network = networks[networkId];
-    if(!network) {
-        throw new Error("Invalid network id: "+networkId);
-    }
-    neb.setRequest(new Nebulas.HttpRequest(properties.get(network + '.url')));
-    token.setContractAddress(properties.get(network + '.contract.token.address'));
-    escrow.setContractAddress(properties.get(network + '.contract.escrow.address'));
-    payment.setContractAddress(properties.get(network + '.contract.payment.address'));
-    AppLogger.logInfo("Network successfully modified to: "+network, true);
-    return IO.createSuccessReponse("Network modified to: "+network);
 }
 
 module.exports = class Blockchain {
@@ -177,6 +164,39 @@ module.exports = class Blockchain {
             const fromAccount = new Account();
             fromAccount.init(neb, key, passPhrase);
             var result = await token.encashToken(fromAccount, toAddress, amount, true);
+            return IO.createSuccessReponse(result);
+        } catch(error) {
+            return IO.createFailureResponse(error);
+        }
+    }
+
+    async createTask(key, passPhrase, id, token, assignees, taskOwner) {
+        try {
+            const fromAccount = new Account();
+            fromAccount.init(neb, key, passPhrase);
+            var result = await task.createTask(fromAccount, id, token, assignees, taskOwner, true);
+            return IO.createSuccessReponse(result);
+        } catch(error) {
+            return IO.createFailureResponse(error);
+        }
+    }
+
+    async addAssignee(key, passPhrase, id, assignee) {
+        try {
+            const fromAccount = new Account();
+            fromAccount.init(neb, key, passPhrase);
+            var result = await task.addAssignee(fromAccount, id,assignee, true);
+            return IO.createSuccessReponse(result);
+        } catch(error) {
+            return IO.createFailureResponse(error);
+        }
+    }
+
+    async markCompleted(key, passPhrase, id) {
+        try {
+            const fromAccount = new Account();
+            fromAccount.init(neb, key, passPhrase);
+            var result = await task.markCompleted(fromAccount, id, true);
             return IO.createSuccessReponse(result);
         } catch(error) {
             return IO.createFailureResponse(error);
