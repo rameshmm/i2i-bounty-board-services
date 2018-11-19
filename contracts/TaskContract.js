@@ -7,13 +7,13 @@ class Task {
       this.token = taskObj.token;
       this.assignees = taskObj.assignees;
       this.taskOwner = taskObj.taskOwner;
-      this.isCompleted = taskObj.isCompleted || false;
+      this.taskStatus = taskObj.taskStatus;
     } else {
       this.id = null;
       this.token = null;
       this.assignees = null;
       this.taskOwner = null;
-      this.isCompleted = false;
+      this.taskStatus = 'NEW';
     }    
   }
 }
@@ -73,7 +73,7 @@ class TaskContract {
     this._contractAddress = contractAddress;
   }
 
-  createTask(id, token, assignees, taskOwner) {
+  createTask(id, token, taskOwner) {
     const from = Blockchain.transaction.from;
     const walletContract = new Blockchain.Contract(this.contractAddress());
 
@@ -95,7 +95,7 @@ class TaskContract {
     const task = new Task();
     task.id = id;
     task.token = token;
-    task.assignees = assignees;
+    task.assignees = "";
     task.taskOwner = taskOwner;
     this.tasks.set(id, task);
 
@@ -106,46 +106,61 @@ class TaskContract {
   }
 
   addAssignee(taskId, assignee) {
-    const from = Blockchain.transaction.from;
-
-    // Only smart contract owner can update a task
-    if (from !== this.owner()) {
-      throw new Error('Not Authorized.');
-    }
+    const from = Blockchain.transaction.from;    
     const task = this.tasks.get(taskId);
     if(!task) {
       throw new Error('No task found');
+    }
+    // Only smart contract owner can update a task
+    if (from !== task.taskOwner) {
+      throw new Error('Not Authorized.');
     }
     task.assignees += assignee;
     this.tasks.set(taskId, task);
     this._taskEvent(taskId, task);
   }
 
-  getTask(id) {
-    return this.tasks.get(id);
-  }
-
   markCompleted(id) {
     const from = Blockchain.transaction.from;
-    const walletContract = new Blockchain.Contract(this.contractAddress());
-    const taskTokenBalance = this.taskTokens.get(task.taskOwner);
+
+    let task = this.tasks.get(id);    
+
+    if (!task) {
+      throw new Error('No task found');
+    }
+
+    // Only task owner can update a task
+    if (from !== task.taskOwner) {
+      throw new Error('Not Authorized.');
+    }
+
+    task.taskStatus = 'COMPLETED';
+    this.tasks.set(id, task);
+    this._taskEvent(taskId, task);
+  }
+
+  markClosed(id) {
+    const from = Blockchain.transaction.from;
+    const walletContract = new Blockchain.Contract(this.contractAddress());    
 
     // Only smart contract owner can update a task
     if (from !== this.owner()) {
       throw new Error('Not Authorized.');
     }
 
-    const task = this.tasks.get(id);
-    task.isCompleted = true;
+    const task = this.tasks.get(id);    
 
     if (!task) {
       throw new Error('No task found');
     }
+
+    const taskTokenBalance = this.taskTokens.get(task.taskOwner);
+    task.taskStatus = 'CLOSED';
     
     // Update task token balance
-    this.taskTokens.set(task.taskOwner, taskTokenBalance.sub(token));
+    this.taskTokens.set(task.taskOwner, taskTokenBalance.sub(task.token));
     this.tasks.set(id, task);
-
+    this._taskEvent(id, task);
     this._transferTaskToken(walletContract, task);
   }
 
@@ -167,7 +182,7 @@ class TaskContract {
   }
 
   _transferTaskToken(contract, task) {
-    return contract.call("transferTaskToken", task);
+    return contract.call("transferTaskToken", task.token, task.taskOwner, task.assignees);
   }
 
   _getTokenBalance(contract, key) {

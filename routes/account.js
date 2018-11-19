@@ -81,9 +81,8 @@ router.post('/createTask', async (req, res) => {
     const passphrase = req.body.passphrase;
     const id = req.body.id;
     const token = req.body.token;
-    const assignees = req.body.assignees;
     const taskOwner = req.body.taskOwner;
-    let result = await blockchainService.createTask(key, passphrase, id, token, assignees, taskOwner);
+    let result = await blockchainService.createTask(key, passphrase, id, token, taskOwner);
     IO.sendResponse(result, res);
 });
 
@@ -105,6 +104,16 @@ router.post('/markCompleted', async (req, res) => {
     const passphrase = req.body.passphrase;
     const id = req.body.id;
     let result = await blockchainService.markCompleted(key, passphrase, id);
+    IO.sendResponse(result, res);
+});
+
+router.post('/markClosed', async (req, res) => {
+    IO.logIncomingRequest(req);
+    res.setHeader('Content-Type', 'application/json');
+    const key = req.body.key;
+    const passphrase = req.body.passphrase;
+    const id = req.body.id;
+    let result = await blockchainService.markClosed(key, passphrase, id);
     IO.sendResponse(result, res);
 });
 

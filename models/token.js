@@ -28,7 +28,6 @@ module.exports = class Token {
 
     async encashToken(fromAccount, toAddress, value, isAsync) {
         const args = [];
-        args.push(Util.createStr(toAddress));
         args.push(value);
         const hash = await this.contract.execute(fromAccount, 'encashToken', args, 0, isAsync);
         return hash;

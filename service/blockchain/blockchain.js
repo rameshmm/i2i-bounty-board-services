@@ -33,7 +33,7 @@ function init(networkId) {
     }
     neb.setRequest(new Nebulas.HttpRequest(properties.get(network + '.url')));
     token = new Token(neb, properties.get(network + '.contract.token.address'));
-    task = new Task(neb,  properties.get(network + '.contract.token.address'));
+    task = new Task(neb,  properties.get(network + '.contract.task.address'));
     AppLogger.logInfo("Network successfully initialized to: "+network, true);
 }
 
@@ -170,11 +170,11 @@ module.exports = class Blockchain {
         }
     }
 
-    async createTask(key, passPhrase, id, token, assignees, taskOwner) {
+    async createTask(key, passPhrase, id, token, taskOwner) {
         try {
             const fromAccount = new Account();
             fromAccount.init(neb, key, passPhrase);
-            var result = await task.createTask(fromAccount, id, token, assignees, taskOwner, true);
+            var result = await task.createTask(fromAccount, id, token, taskOwner, true);
             return IO.createSuccessReponse(result);
         } catch(error) {
             return IO.createFailureResponse(error);
@@ -197,6 +197,17 @@ module.exports = class Blockchain {
             const fromAccount = new Account();
             fromAccount.init(neb, key, passPhrase);
             var result = await task.markCompleted(fromAccount, id, true);
+            return IO.createSuccessReponse(result);
+        } catch(error) {
+            return IO.createFailureResponse(error);
+        }
+    }
+
+    async markClosed(key, passPhrase, id) {
+        try {
+            const fromAccount = new Account();
+            fromAccount.init(neb, key, passPhrase);
+            var result = await task.markClosed(fromAccount, id, true);
             return IO.createSuccessReponse(result);
         } catch(error) {
             return IO.createFailureResponse(error);

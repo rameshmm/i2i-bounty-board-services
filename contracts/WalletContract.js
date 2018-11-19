@@ -127,11 +127,12 @@ class WalletContract {
 
   encashToken(token) {
     const sender = Blockchain.transaction.from;
+    const receiver = this.owner();
     const senderCreditBalance = this.credits.get(sender) || new BigNumber(0);
     const receiverBalance = this.balances.get(this.owner()) || new BigNumber(0);
     token = new BigNumber(token); 
 
-    if (this._isLessThan(senderBalance, token)) {
+    if (this._isLessThan(senderCreditBalance, token)) {
       throw new Error('Insufficient token balance.');
     }
 
@@ -146,11 +147,7 @@ class WalletContract {
     this._transferEvent(true, sender, receiver, token);
   }
 
-  getFrom() {
-    return Blockchain.transaction.from;
-  }
-
-  transferTaskToken(task) {
+  transferTaskToken(taskToken, taskOwner, assignees) {
     const from = Blockchain.transaction.from;
 
     // Only approved smart contract can perform token transfer
@@ -158,17 +155,17 @@ class WalletContract {
       throw new Error('Not Authorized.');
     }
     
-    const fromBalance = this.balances.get(task.taskOwner) || new BigNumber(0);
-    const assignees = task.assignees.split(',');
-    const token = Math.floor(new BigNumber(task.token) / assignees.length);
+    const fromBalance = this.balances.get(taskOwner) || new BigNumber(0);
+    const assigneesArr = assignees.split(',');
+    const token = Math.floor(new BigNumber(taskToken) / assigneesArr.length);
     let toCreditBalance;
 
-    for(let assignee of assignees) {
+    for(let assignee of assigneesArr) {
       toCreditBalance = this.credits.get(assignee) || new BigNumber(0);
       // Update sender balance and receiver credit balance
-      this.balances.set(task.taskOwner, fromBalance.sub(token));
+      this.balances.set(taskOwner, fromBalance.sub(token));
       this.credits.set(assignee, toCreditBalance.add(token));
-      this._transferEvent(true, task.taskOwner, assignee, token);
+      this._transferEvent(true, taskOwner, assignee, token);
     }    
   }
 
@@ -181,10 +178,6 @@ class WalletContract {
     }
 
     this.accepts.set(contractAddress, "true");
-  }
-
-  getAccess(contractAddress) {
-    return this.accepts.get(contractAddress);
   }
 
   _transferEvent(status, from, to, value) {
